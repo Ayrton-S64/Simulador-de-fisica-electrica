@@ -1,0 +1,57 @@
+body{
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    position: relative;
+}
+
+.simContainer{
+    height: calc(100% - 59px);
+    width: 100vw;
+}
+
+.ctrlContainer{
+    height: 59px;
+    display: flex;
+    margin-top: auto;
+    background-color: darkslategrey;
+    border-width: 2px 0px 0px 0px;
+    box-sizing: border-box;
+    border-style: solid;
+    border-color: black;
+    align-items: center;
+    justify-content: center;
+}
+
+.ctrlContainer > input{
+    height: 38px;
+    border: 0px;
+    border-radius: 8px;
+    font-size: 20px;
+    font-weight: 200;
+    color: white;
+    background-color: olivedrab;
+    outline: none;
+    cursor: pointer;
+    padding: 2px 16px;
+}
+
+.ctrlContainer > input:hover, .ctrlContainer > input:focus{
+    background-color: firebrick;
+}
+
+canvas{
+    margin:0;
+    box-sizing: border-box;
+    cursor: crosshair;
+}
+
+.jsinput{
+    position: absolute;
+    z-index: 1;
+    display: none;
+}
+
