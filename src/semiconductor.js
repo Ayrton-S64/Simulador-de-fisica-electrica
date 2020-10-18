@@ -54,6 +54,24 @@ class Vector{
           }
           return this;
       }
+      static add(vector1, vector2){
+        return new Vector(vector1.x+vector2.x,vector1.y+vector2.y)
+      }
+      static sub(vector1,vector2){
+        return new Vector(vector1.x-vector2.x,vector1.y-vector2.y)
+      }
+      static mult(vector, scalar){
+        return new Vector(vector.x*scalar,vector.y*scalar)
+      }
+      static div(vector, scalar){
+        return new Vector(vector.x/scalar,vector.y/scalar)
+      }
+      dot(vector){
+        return this.x * vector.x + this.y * vector.y;
+      }
+      getTangent(){
+        return new Vector(-this.y, this.x);
+      }
 }
 
 class Casilla{
@@ -61,11 +79,13 @@ class Casilla{
 }
 
 class Carga{
-    constructor(x,y,q){
+    constructor(x,y,q, canMove){
         this.position = new Vector(x,y);
         this.velocity = new Vector(0,0);
         this.aceleration = new Vector(0,0);
         this.carga = q;
+        this.movable = canMove;
+        this.radius = (this.carga>0)?10:5;
     }
 
     applyForce(force){
@@ -73,15 +93,52 @@ class Carga{
     }
 
     update(){
-        this.position.add(this.velocity);
-        this.velocity.add(this.aceleration);
-        this.aceleration.mul(0);
+        if(this.movable==true){
+            this.position.add(this.velocity);
+            this.velocity.add(this.aceleration);
+            this.aceleration.mul(0);
+        }
     }
+
+    checkCollision(particle){
+        const v = Vector.sub(this.position,particle.position);
+        const dist = v.mag;
+        //console.log(dist)
+        if(dist<=this.radius + particle.radius){
+          console.log("colision");
+          const unitNormal = Vector.div(v,v.mag);
+          const unitTangent = unitNormal.getTangent();
+          
+          const correction = Vector.mult(unitNormal,this.radius+particle.radius);
+          const newV = Vector.add(particle.position, correction);
+          this.pos = newV;
+    
+          const a = this.velocity;
+          const b = particle.velocity;
+          const a_n = a.dot(unitNormal);
+          const b_n = b.dot(unitNormal);
+          const a_t = a.dot(unitTangent);
+          const b_t = b.dot(unitTangent);
+    
+          const a_n_final = (a_n*(this.radius-particle.radius) + 2 * particle.radius*b_n)/(this.radius+particle.radius);
+          const b_n_final = (b_n*(this.radius-particle.radius) + 2 * particle.radius*a_n)/(this.radius+particle.radius);
+    
+          const a_n_after = Vector.mult(unitNormal, a_n_final);
+          const b_n_after = Vector.mult(unitNormal, b_n_final);
+          const a_t_after = Vector.mult(unitTangent, a_t);
+          const b_t_after = Vector.mult(unitTangent, b_t);
+          const a_after = Vector.add(a_n_after,a_t_after);
+          const b_after = Vector.add(b_n_after,b_t_after);
+    
+          this.velocity = a_after;
+          particle.velocity = b_after;
+        }
+      }
 
     dibujar(){
         ctx.beginPath();
         ctx.fillStyle = (this.carga>0)?'red':'blue';
-        ctx.arc(this.position.x,this.position.y,5,0,Math.PI*2);
+        ctx.arc(this.position.x,this.position.y,this.radius,0,Math.PI*2);
         ctx.fill();
         ctx.closePath();
     }
@@ -117,15 +174,16 @@ function drawPlane(){
 const qe = -1*1.6 * Math.pow(10,-19);
 const k = 8.9875517873681764*Math.pow(10,9);
 
-const E = new Vector(1e16,0);
+const E = new Vector(1e15,0);
 
 const cargas = [];
+const electrones = [];
 
 function createElectron(x,y){
-    cargas.push(new Carga(x,y,qe));
+    cargas.push(new Carga(x,y,qe,true));
 }
 function createProton(x,y){
-    cargas.push(new Carga(x,y,-qe));
+    cargas.push(new Carga(x,y,-qe,false));
 }
 
 function getEFieldnX(t_carga){
@@ -155,6 +213,14 @@ function getTotalElectricForce(q1){
     return toltalEF;
 }
 
+function applyColision(ct){
+    for(particle of cargas){
+        if(ct!=particle){
+            ct.checkCollision(particle);
+        }
+    }
+}
+
 function update(){
     ctx.clearRect(0,0,cvs.width,cvs.height);
     drawPlane();
@@ -162,10 +228,11 @@ function update(){
         if(c.position.x<=x0 && c.position.x>=-x0 
             && c.position.y <=y0 && c.position.y>=-y0){
             c.dibujar();
-            //c.applyForce(E.clone().mul(c.carga));
-            c.applyForce(getEFieldnX(c));
-            c.applyForce(getTotalElectricForce(c));
-            c.aceleration.mul(1e10);
+            c.applyForce(E.clone().mul(c.carga));
+            //c.applyForce(getEFieldnX(c));
+            //c.applyForce(getTotalElectricForce(c));
+            c.aceleration.mul(1);
+            applyColision(c);
             c.update();
         }
         else{cargas.splice(cargas.indexOf(c),1)}
@@ -175,14 +242,21 @@ function update(){
 requestAnimationFrame(update);
 
 function start(){
-    for(let i = 250;i>=50;i-=50){
-        createProton(50,-i);
-        createProton(50, i);
-        createElectron(-50,-i);
-        createElectron(-50, i);
-        createProton(-100,-i);
-        createProton(-100, i);
-        createElectron(100,-i);
-        createElectron(100, i);
+    createProton(0,0);
+    for(let i = 200; i >= 50; i-=50){
+        createProton(i,0);
+        createProton(-i,0);
+        createProton(0,i);
+        createProton(0,-i);
+    }
+    for(let i = 200;i>=50;i-=50){
+        for(let j = 200; j>=50; j-=50){
+            createProton(i,j);    
+            createProton(-i,-j);
+            createProton(-i,j);
+            createProton(i,-j);
+        }
     }
 }
+
+start();

@@ -6,35 +6,29 @@ class Vector{
     clone() {
           return new this.constructor(this.x, this.y);
       }
-  
       add(v) {
           this.x += v.x;
           this.y += v.y;
           return this;
       }
-  
       sub(v) {
           this.x = this.x - v.x;
           this.y = this.y - v.y;
           return this;
       }
-  
       mul(x) {
           this.x *= x;
           this.y *= x;
           return this;
       }
-  
       div(x) {
           this.x /= x;
           this.y /= x;
           return this;
       }
-  
       get mag() {//magnitud
           return Math.sqrt(this.x * this.x + this.y * this.y);
-      }
-  
+      } 
       norm() {//normal
           var mag = this.mag;
           if (mag > 0) {
@@ -48,7 +42,9 @@ class Charge{
   constructor(vector, carga){
     this.vPos = vector;
     this.carga = carga;
+    this.radius = 5;
   }
+
   dibujar (contexto){
     contexto.beginPath();
     contexto.arc(this.vPos.x*step, this.vPos.y*step*-1,5,0,Math.PI*2);
@@ -63,11 +59,6 @@ function getEforce(distancia,carga){
     return f;
 }
 
-function addCarga(x,y,q){
-  arrCargas.push(new Charge(new Vector(x,y),q));
-  arrCargas[arrCargas.length-1].dibujar(ctx);
-}
-
 function getVForce(x,y){
   let temp_v = new Vector(x,y);
   let sumx = 0;
@@ -80,6 +71,13 @@ function getVForce(x,y){
   }
   return new Vector(sumx,sumy);
 }
+
+function addCarga(x,y,q){
+  arrCargas.push(new Charge(new Vector(x,y),q));
+  arrCargas[arrCargas.length-1].dibujar(ctx);
+}
+
+
 
 function drawArrowhead(context, from, to, radius) {
 	var x_center = to.x;
@@ -138,10 +136,11 @@ function setVectors(){
 }
 
 function drawPlane(){
+  ctx.beginPath();
   ctx.fillStyle = "White";
   ctx.fillRect(-x0,-y0,2*x0,2*y0);
   ctx.lineWidth = 0.5;
-  ctx.strokeStyle = '#CBCBCB'
+  ctx.strokeStyle = '#CBCBCB';
   for(let i=0;i<=y0;i+=step){
     for(let j=0;j<=x0;j+=step){
       ctx.moveTo(j,-y0);
@@ -203,6 +202,51 @@ function cvsHandleMouseMove({layerX:x , layerY:y}){
   ctx.fill();
 }
 
+/*async*/ function tstrHandleMouseMove({layerX:x , layerY:y}){
+  x-=x0;
+  y-=y0;
+  //await requestAnimationFrame(()=>resetCanvas());
+  resetCanvas();
+  ctx.beginPath();
+  ctx.arc(x,y,10,0,Math.PI*2);
+  ctx.strokeStyle="#DD0000";
+  ctx.stroke();
+  ctx.strokeStyle="black";
+  ctx.moveTo(x-12,y);
+  ctx.lineTo(x-4,y);
+  ctx.moveTo(x+12,y);
+  ctx.lineTo(x+4,y);
+  ctx.moveTo(x,y-12);
+  ctx.lineTo(x,y-4);
+  ctx.moveTo(x,y+12);
+  ctx.lineTo(x,y+4);
+  ctx.stroke();
+  ctx.closePath();
+}
+
+function tstrHandleMouseClick({layerX:x , layerY:y}){
+  x-=x0;
+  y-=y0;
+  resetCanvas();
+  ctx.beginPath();
+  ctx.arc(x,y,3,0,Math.PI*2);
+  ctx.strokeStyle='black'
+  ctx.stroke();
+  ctx.arc(x,y,2,0,Math.PI*2);
+  ctx.fillStyle="#DDEE00";
+  ctx.fill();
+  ctx.fillStyle="black";
+  ctx.font = "bold 12px arial";
+  ctx.fillText("Tester",x+5,y+10);
+  cvs.removeEventListener('mousemove',tstrHandleMouseMove);
+  cvs.removeEventListener('click',tstrHandleMouseClick);
+  cvs.style.cursor='crosshair';
+
+  txtIntE.value = getVForce(x,y).mag;
+  txtPotE.value = "En proceso"//getVForce(x,y).mag*new Vector
+  testerPnl.style.display = 'flex';
+}
+
     const cvs = document.createElement("canvas");
     const ctx = cvs.getContext('2d');
     const contenedor = document.getElementById('simulacion');
@@ -231,7 +275,19 @@ function cvsHandleMouseMove({layerX:x , layerY:y}){
       cvs.addEventListener('mousemove',cvsHandleMouseMove);
       cvs.addEventListener('click',cvsHandleClick)
     })
+    //put Tester
+    const btnTester = document.getElementById("putTester");
+    btnTester.addEventListener('click', (ev)=>{
+      cvs.style.cursor='none';
+      cvs.addEventListener('mousemove', tstrHandleMouseMove);
+      cvs.addEventListener('click',tstrHandleMouseClick);
+      testerPnl.style.display="none";
+    })
 
+    //tester HUD
+    const testerPnl = document.getElementById('testerPanel');
+    const txtIntE = document.getElementById('intentsidadE');
+    const txtPotE = document.getElementById('potencialE');
     //para hallar los equipotenciales
     // function equipotential(voltage){
     //   let testvalues = [];
